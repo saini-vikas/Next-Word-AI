@@ -5,8 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{title}}</title>
     <meta name="description" content="Next Word AI web page" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
   </head>
-  <body>
-    <h1>{{title}}</h1>
+  <body
+    class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4"
+  >
+    <div class="w-full max-w-lg">
+      <h1
+        class="text-3xl font-semibold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400"
+      >
+        {{title}}
+      </h1>
+
+      <div
+        class="relative bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700/50"
+      >
+        <!-- Suggestion Bar -->
+        <div class="flex space-x-2 mb-3 h-10" id="suggestionBar">
+          <button
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-sm font-medium rounded-lg transition-colors duration-200 truncate px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            the
+          </button>
+          <button
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-sm font-medium rounded-lg transition-colors duration-200 truncate px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            is
+          </button>
+          <button
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-sm font-medium rounded-lg transition-colors duration-200 truncate px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            and
+          </button>
+          <button
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-sm font-medium rounded-lg transition-colors duration-200 truncate px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            to
+          </button>
+          <button
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-sm font-medium rounded-lg transition-colors duration-200 truncate px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          >
+            a
+          </button>
+        </div>
+
+        <!-- Input Field -->
+        <div class="relative">
+          <textarea
+            id="textInput"
+            rows="4"
+            class="w-full bg-slate-900/50 border border-slate-600 text-slate-100 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none placeholder-slate-400 text-lg transition-all"
+            placeholder="Type your message here..."
+          ></textarea>
+
+          <div class="absolute bottom-3 right-3 flex items-center">
+            <button
+              class="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors duration-200 focus:outline-none shadow-lg shadow-blue-500/20"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mt-4 text-center">
+          Suggestions will update as you type.
+        </p>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const textInput = document.getElementById("textInput");
+        const suggestionButtons = document.querySelectorAll(
+          "#suggestionBar button",
+        );
+        let debounceTimer;
+
+        async function fetchSuggestions(text) {
+          if (!text.trim()) {
+            return;
+          }
+
+          try {
+            const response = await fetch("/predict", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ text: text, top_k: 5 }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              updateSuggestions(data.suggestions);
+            }
+          } catch (error) {
+            console.error("Error fetching suggestions:", error);
+          }
+        }
+
+        function updateSuggestions(suggestions) {
+          suggestionButtons.forEach((btn, index) => {
+            if (suggestions[index]) {
+              // Remove the 'Ġ' character often used by tokenizers to represent spaces
+              let word = suggestions[index].replace(/Ġ/g, "");
+              btn.textContent = word;
+            } else {
+              btn.textContent = "";
+            }
+          });
+        }
+
+        textInput.addEventListener("input", (e) => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchSuggestions(e.target.value);
+          }, 300); // 500ms debounce
+        });
+
+        suggestionButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const suggestion = btn.textContent;
+            if (!suggestion) return;
+
+            let currentText = textInput.value;
+
+            // Add space if needed
+            if (
+              currentText.length > 0 &&
+              !currentText.endsWith(" ") &&
+              !suggestion.startsWith(" ") &&
+              !/^[.,!?]/.test(suggestion)
+            ) {
+              currentText += " ";
+            }
+
+            currentText += suggestion;
+            textInput.value = currentText;
+            textInput.focus();
+
+            // Fetch next suggestions immediately
+            clearTimeout(debounceTimer);
+            fetchSuggestions(currentText);
+          });
+        });
+      });
+    </script>
   </body>
 </html>
