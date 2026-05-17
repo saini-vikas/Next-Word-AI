@@ -62,7 +62,7 @@ class PredictionRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "title": "Next Word AI"})
+    return templates.TemplateResponse(request=request, name="index.html", context={"title": "Next Word AI"})
 
 
 @app.post("/predict")
